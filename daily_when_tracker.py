@@ -4,10 +4,11 @@ import pandas as pd
 from pathlib import Path
 from textual.app import App
 from textual.widget import Widget
-from textual.widgets import Header, Footer, DataTable, Static, Input, Button
+from textual.widgets import Header, Footer, DataTable, Static, Input, Button, ContentSwitcher
 from textual.validation import Integer, Length
 from textual.containers import Horizontal
 from textual import on
+from textual_plotext import PlotextPlot
 
 
 class DataView(Widget):
@@ -94,11 +95,57 @@ class InputView(Widget):
             self.query_one(ErrorDisplay).no_error_message()
 
 
+class Plotview(Widget):
+    def compose(self):
+        with Horizontal(id="plot-tabs"):
+            yield Button("Time over Total", id="time-over-total")
+            yield Button("Time over Alertness", id="time-over-alertness")
+            yield Button("Time over Energy", id="time-over-energy")
+            yield Button("Back", classes="back-button", id="plot-back", variant="error")
+
+        with ContentSwitcher(initial="time-over-total"):
+            yield PlotextPlot(classes="bar-plot", id="time-over-total")
+            yield PlotextPlot(classes="bar-plot", id="time-over-alertness")
+            yield PlotextPlot(classes="bar-plot", id="time-over-energy")
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id != "plot-back":
+            self.query_one(ContentSwitcher).current = event.button.id
+
+    def plot_total(self, x, y):
+        plt = self.query(PlotextPlot).filter("#time-over-total").only_one().plt
+        plt.bar(x, y, color="orange")
+        plt.xlabel("Time of day")
+        plt.ylabel("Total Score")
+        plt.ylim(0, 20)
+        plt.yticks(list(range(21)))
+        plt.title("Total score over time of day")
+
+    def plot_alertness(self, x, y):
+        plt = self.query(PlotextPlot).filter("#time-over-alertness").only_one().plt
+        plt.bar(x, y, color="red")
+        plt.xlabel("Time of day")
+        plt.ylabel("Alertness")
+        plt.ylim(0, 10)
+        plt.yticks(list(range(11)))
+        plt.title("Alertness over time of day")
+
+    def plot_energy(self, x, y):
+        plt = self.query(PlotextPlot).filter("#time-over-energy").only_one().plt
+        plt.bar(x, y, color="blue")
+        plt.xlabel("Time of day")
+        plt.ylabel("Energy")
+        plt.ylim(0, 10)
+        plt.yticks(list(range(11)))
+        plt.title("Energy over time of day")
+
+
 class WhenTrackerApp(App):
     TITLE = "When Tracker"
     BINDINGS = [
         ("a", "add_row", "Add Row"),
         ("r", "remove_row", "Delete Row"),
+        ("p", "show_plots", "Plot"),
         ("s", "save", "Save"),
         ("e", "exit_application", "Exit"),
         ("d", "toggle_dark_mode", "Toggle Dark Mode"),
@@ -111,6 +158,7 @@ class WhenTrackerApp(App):
         yield Footer()
         yield DataView(id="data-view")
         yield InputView(id="input-view")
+        yield Plotview(id="plot-view")
 
     @staticmethod
     def round_time(dt: Union[datetime.datetime, None] = None, round_to: int = 60) -> datetime.datetime:
@@ -127,6 +175,7 @@ class WhenTrackerApp(App):
 
     def show_data(self) -> None:
         self.query_one(InputView).styles.display = "none"
+        self.query_one(Plotview).styles.display = "none"
 
         data_view = self.query_one(DataView)
         data_view.styles.display = "block"
@@ -140,10 +189,45 @@ class WhenTrackerApp(App):
 
     def action_add_row(self) -> None:
         self.query_one(DataView).styles.display = "none"
+        self.query_one(Plotview).styles.display = "none"
         self.query_one(InputView).styles.display = "block"
 
         input = self.query(Input).first()
         input.focus()
+
+    @on(Button.Pressed, "#time-over-total")
+    def plot_total(self) -> None:
+        df = self.query_one(DataView).get_df()
+        df["total"] = df.energy + df.alertness
+        x = sorted(df.time.unique())
+        y = list(df[["time", "total"]].groupby("time").median().total)
+
+        self.query_one(Plotview).plot_total(x, y)
+
+    @on(Button.Pressed, "#time-over-alertness")
+    def plot_alertness(self) -> None:
+        df = self.query_one(DataView).get_df()
+        x = sorted(df.time.unique())
+        y = list(df[["time", "alertness"]].groupby("time").median().alertness)
+
+        self.query_one(Plotview).plot_alertness(x, y)
+
+    @on(Button.Pressed, "#time-over-energy")
+    def plot_energy(self) -> None:
+        df = self.query_one(DataView).get_df()
+        x = sorted(df.time.unique())
+        y = list(df[["time", "energy"]].groupby("time").median().energy)
+
+        self.query_one(Plotview).plot_energy(x, y)
+
+    def action_show_plots(self) -> None:
+        self.query_one(InputView).styles.display = "none"
+        self.query_one(DataView).styles.display = "none"
+        self.query_one(Plotview).styles.display = "block"
+
+        self.plot_total()
+        plot = self.query(PlotextPlot).filter("#time-over-total").only_one()
+        plot.focus()
 
     def action_remove_row(self) -> None:
         if self.query_one(DataView).styles.display == "block":

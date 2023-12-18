@@ -52,3 +52,34 @@ InputView ErrorDisplay {
     margin: 1 4 1 1;
 }
 
+/* Plot View CSS */
+
+#plot-view {
+    display: none;
+}
+
+#plot-view #plot-tabs {
+    height: auto;
+    margin-top: 1;
+    width: 90%;
+}
+
+#plot-view #plot-tabs Button{
+    margin-right: 1;
+    width: auto;
+}
+
+#plot-view #plot-tabs #plot-back{
+    margin-right: 0;
+    dock: right;
+}
+
+#plot-view ContentSwitcher {
+    background: $panel;
+    border: round $primary;
+    width: 90%;
+}
+
+#plot-view ContentSwitcher PlotextPlot{
+    margin: 1 1 4 2;
+}
