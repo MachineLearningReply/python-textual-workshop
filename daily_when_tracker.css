@@ -7,3 +7,48 @@ Screen {
 DataView {
     margin-top: 1;
 }
+
+/* Input View CSS */
+
+InputView {
+    display: none;
+}
+
+#input-array {
+    height: auto;
+}
+
+#input-array Input {
+    width: auto;
+    margin: 1 1 1 0;
+}
+
+#input-array #task {
+    min-width: 100; 
+}
+
+#input-array Input.-valid {
+    border: tall $success 60%;
+}
+
+#input-array Input.-valid:focus {
+    border: tall $success;
+}
+
+#input-array Input.-invalid {
+    border: tall $error 60%;
+}
+
+#input-array Input.-invalid:focus {
+    border: tall $error;
+}
+
+InputView ErrorDisplay {
+    margin: 1 0 2 1;
+    color: red;
+}
+
+#input-buttons Button {
+    margin: 1 4 1 1;
+}
+
